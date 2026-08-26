@@ -20,12 +20,12 @@ se puede escalar el trabajo total N × repeat a un tamaño "inmenso" con N moder
 
 | Threads | Tiempo (pfor) | Speedup | Eficiencia |
 |--------:|--------------:|--------:|-----------:|
-|       1 |      0.2418 s |    0.73 |        73% |
-|       2 |      0.1242 s |    1.43 |        71% |
-|       4 |      0.0648 s |    2.73 |        68% |
-|       8 |      0.0384 s |    4.61 |        58% |
+|       1 |      0.2516 s |    0.72 |        72% |
+|       2 |      0.1236 s |    1.47 |        74% |
+|       4 |      0.0658 s |    2.77 |        69% |
+|       8 |      0.0382 s |    4.77 |        60% |
 
-(T secuencial de referencia = 0.1771 s)
+(T secuencial de referencia = 0.1822 s)
 
 `sections` solo reparte 3 tareas (temperatura/humedad/viento) → su speedup se
 satura en ~0.7 a partir de 4 threads: **no hay más de 3 secciones para
