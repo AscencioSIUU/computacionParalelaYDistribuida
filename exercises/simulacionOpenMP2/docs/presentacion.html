@@ -1,0 +1,599 @@
+<title>Simulación de Predicción Climática con OpenMP</title>
+<style>
+  :root{
+    --bg:#0c1420; --bg2:#111d2e; --panel:#152437; --panel2:#1b3049;
+    --ink:#eaf2fb; --muted:#93a8c2; --line:#2a3f5a;
+    --sky:#4db6e6; --sky-dim:#2b6f96; --amber:#f5a94e; --heat:#ef6b5a;
+    --green:#5fc59a; --grid:rgba(77,182,230,.08);
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --disp:"SF Pro Display",var(--sans);
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#eef3f8; --bg2:#e4ecf4; --panel:#ffffff; --panel2:#f2f6fb;
+      --ink:#122135; --muted:#4f647d; --line:#d3e0ec;
+      --sky:#1f80b8; --sky-dim:#7fb4d4; --amber:#c47a1e; --heat:#d1503e;
+      --green:#2f9a72; --grid:rgba(31,128,184,.07);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1420; --bg2:#111d2e; --panel:#152437; --panel2:#1b3049;
+    --ink:#eaf2fb; --muted:#93a8c2; --line:#2a3f5a;
+    --sky:#4db6e6; --sky-dim:#2b6f96; --amber:#f5a94e; --heat:#ef6b5a;
+    --green:#5fc59a; --grid:rgba(77,182,230,.08);
+  }
+  :root[data-theme="light"]{
+    --bg:#eef3f8; --bg2:#e4ecf4; --panel:#ffffff; --panel2:#f2f6fb;
+    --ink:#122135; --muted:#4f647d; --line:#d3e0ec;
+    --sky:#1f80b8; --sky-dim:#7fb4d4; --amber:#c47a1e; --heat:#d1503e;
+    --green:#2f9a72; --grid:rgba(31,128,184,.07);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:var(--sans);color:var(--ink);
+    background:
+      radial-gradient(120% 90% at 80% -10%, rgba(77,182,230,.10), transparent 55%),
+      radial-gradient(100% 80% at 0% 110%, rgba(245,169,78,.07), transparent 50%),
+      linear-gradient(var(--bg),var(--bg2));
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  .deck{height:100vh;height:100dvh;display:flex;flex-direction:column}
+  .stage{flex:1;position:relative;overflow:hidden}
+  .slide{
+    position:absolute;inset:0;padding:clamp(20px,4.5vw,64px);
+    display:none;flex-direction:column;justify-content:center;
+    max-width:1180px;margin:0 auto;
+    animation:in .5s cubic-bezier(.2,.7,.2,1);
+  }
+  .slide.on{display:flex}
+  @keyframes in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.slide{animation:none}}
+
+  .eyebrow{font-family:var(--mono);font-size:clamp(11px,1.1vw,13px);letter-spacing:.22em;
+    text-transform:uppercase;color:var(--sky);margin:0 0 .7rem}
+  h1{font-family:var(--disp);font-weight:800;font-size:clamp(30px,6.2vw,68px);
+    line-height:1.02;letter-spacing:-.02em;margin:0;text-wrap:balance}
+  h2{font-family:var(--disp);font-weight:750;font-size:clamp(24px,3.9vw,44px);
+    line-height:1.06;letter-spacing:-.015em;margin:0 0 1.2rem;text-wrap:balance}
+  h3{font:650 clamp(15px,1.5vw,18px)/1.3 var(--disp);margin:0 0 .5rem;color:var(--ink)}
+  p{color:var(--muted);font-size:clamp(14px,1.5vw,18px);line-height:1.55;margin:0 0 .8rem;max-width:64ch}
+  strong{color:var(--ink);font-weight:650}
+  .lead{font-size:clamp(16px,1.9vw,22px);color:var(--ink);max-width:56ch}
+  ul{margin:.2rem 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.55rem}
+  li{position:relative;padding-left:1.5rem;color:var(--muted);font-size:clamp(14px,1.45vw,17px);line-height:1.45}
+  li::before{content:"";position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:2px;
+    background:var(--sky);transform:rotate(45deg)}
+
+  .grid{display:grid;gap:clamp(14px,1.8vw,22px)}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media (max-width:720px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:clamp(14px,1.8vw,22px)}
+  .card.accent{border-color:var(--sky-dim);
+    background:linear-gradient(180deg,var(--panel2),var(--panel))}
+
+  code,pre{font-family:var(--mono)}
+  pre{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:clamp(12px,1.6vw,20px);overflow:auto;margin:0;
+    font-size:clamp(12px,1.25vw,15px);line-height:1.5;color:var(--ink)}
+  pre .k{color:var(--sky)} pre .c{color:var(--muted)} pre .a{color:var(--amber)}
+  code.inl{background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+    padding:.08em .45em;font-size:.88em;color:var(--sky)}
+
+  table{border-collapse:collapse;width:100%;font-size:clamp(13px,1.35vw,16px)}
+  th,td{padding:.55rem .8rem;text-align:left;border-bottom:1px solid var(--line)}
+  th{font-family:var(--mono);font-size:.78em;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--sky);font-weight:600}
+  td{color:var(--muted)} td strong{color:var(--ink)}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+
+  .formula{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:10px;padding:1rem 1.3rem;font-family:var(--mono);font-size:clamp(15px,1.7vw,21px);
+    color:var(--ink);display:inline-flex;align-items:center;gap:.5em;margin:.3rem 0}
+  .formula .sub{font-size:.7em;vertical-align:sub;color:var(--sky)}
+  .big{font-size:clamp(28px,5vw,56px);font-weight:800;font-family:var(--disp);color:var(--amber);
+    letter-spacing:-.02em;line-height:1}
+  .kpi{display:flex;flex-direction:column;gap:.2rem}
+  .kpi .v{font:800 clamp(26px,4vw,46px)/1 var(--disp);color:var(--sky);letter-spacing:-.02em}
+  .kpi .l{font-family:var(--mono);font-size:.72em;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:.5rem}
+  .chip{font-family:var(--mono);font-size:clamp(12px,1.2vw,14px);padding:.35em .8em;border-radius:999px;
+    background:var(--panel2);border:1px solid var(--line);color:var(--sky)}
+
+  .flow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.55rem .9rem;
+    font-family:var(--mono);font-size:clamp(11px,1.15vw,14px);color:var(--ink);white-space:nowrap}
+  .node.hi{border-color:var(--sky-dim);color:var(--sky)}
+  .arrow{color:var(--sky);font-size:1.2em}
+
+  .threads{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
+  @media(max-width:720px){.threads{grid-template-columns:1fr 1fr}}
+  .thread{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:.7rem;
+    text-align:center;font-family:var(--mono);font-size:clamp(11px,1.1vw,13px)}
+  .thread b{display:block;color:var(--amber);margin-bottom:.3rem}
+
+  /* nav bar */
+  .bar{display:flex;align-items:center;gap:.9rem;padding:.6rem clamp(16px,3vw,40px);
+    border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 82%,transparent);
+    backdrop-filter:blur(8px)}
+  .bar .title{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.05em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prog{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+  .prog span{display:block;height:100%;background:linear-gradient(90deg,var(--sky),var(--amber));
+    width:0;transition:width .4s ease}
+  .count{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .btn{appearance:none;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:15px;display:grid;place-items:center;
+    transition:border-color .2s,background .2s}
+  .btn:hover{border-color:var(--sky);color:var(--sky)}
+  .btn:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+  .tgl{margin-left:auto}
+
+  .hero-badge{display:inline-flex;gap:.6rem;flex-wrap:wrap;margin-top:1.6rem}
+  .meta{display:flex;gap:2.2rem;flex-wrap:wrap;margin-top:2rem}
+  .meta div{display:flex;flex-direction:column;gap:.15rem}
+  .meta .l{font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--sky)}
+  .meta .v{font-size:clamp(15px,1.7vw,19px);color:var(--ink);font-weight:600}
+  .hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+    font-family:var(--mono);font-size:11px;color:var(--muted);opacity:.7}
+  .sub{color:var(--muted)}
+  .callout{border-left:3px solid var(--heat);background:var(--panel);border-radius:0 10px 10px 0;
+    padding:.9rem 1.2rem;color:var(--ink);font-size:clamp(14px,1.5vw,18px)}
+</style>
+
+<div class="deck">
+  <div class="stage" id="stage">
+
+    <!-- 1 TITLE -->
+    <section class="slide on">
+      <p class="eyebrow">Programación Paralela · Diseño del caso</p>
+      <h1>Simulación de Predicción<br>Climática con <span style="color:var(--sky)">OpenMP</span></h1>
+      <p class="lead" style="margin-top:1.2rem">Un modelo climático simplificado usado como banco de pruebas para estudiar paralelismo de datos y de tareas — midiendo cuándo el paralelismo realmente compensa.</p>
+      <div class="meta">
+        <div><span class="l">Caso</span><span class="v">Predicción del clima</span></div>
+        <div><span class="l">Lenguaje</span><span class="v">C</span></div>
+        <div><span class="l">Tecnología</span><span class="v">OpenMP</span></div>
+        <div><span class="l">Datos</span><span class="v">500 regiones</span></div>
+      </div>
+      <p class="hint">← → para navegar · T cambia el tema</p>
+    </section>
+
+    <!-- 2 INTRO -->
+    <section class="slide">
+      <p class="eyebrow">01 · Introducción</p>
+      <h2>¿Qué se va a realizar?</h2>
+      <div class="grid g2">
+        <div>
+          <p>Una simulación de un sistema simplificado de <strong>predicción de condiciones climáticas para el día siguiente</strong>, sobre <strong>500 regiones</strong>, cada una con sus condiciones actuales.</p>
+          <p>El objetivo real no es un sistema meteorológico preciso, sino estudiar la <strong>paralelización con OpenMP</strong>.</p>
+        </div>
+        <div class="grid g2" style="gap:.8rem;align-content:start">
+          <div class="card"><h3>Entrada</h3><ul>
+            <li>Temperatura actual</li><li>Humedad actual</li><li>Viento actual</li></ul></div>
+          <div class="card accent"><h3>Salida</h3><ul>
+            <li>Temperatura siguiente</li><li>Humedad siguiente</li><li>Viento siguiente</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DATOS -->
+    <section class="slide">
+      <p class="eyebrow">02 · Datos iniciales</p>
+      <h2>N = 500 regiones</h2>
+      <p>Valores generados aleatoriamente dentro de rangos definidos, para evitar datos absurdos.</p>
+      <div class="card" style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Región</th><th class="num">Temperatura</th><th class="num">Humedad</th><th class="num">Viento</th></tr></thead>
+          <tbody>
+            <tr><td><strong>0</strong></td><td class="num">25.4 °C</td><td class="num">68 %</td><td class="num">12.5 km/h</td></tr>
+            <tr><td><strong>1</strong></td><td class="num">31.2 °C</td><td class="num">55 %</td><td class="num">8.3 km/h</td></tr>
+            <tr><td><strong>2</strong></td><td class="num">22.7 °C</td><td class="num">81 %</td><td class="num">17.4 km/h</td></tr>
+            <tr><td><strong>3</strong></td><td class="num">28.5 °C</td><td class="num">64 %</td><td class="num">11.2 km/h</td></tr>
+            <tr><td class="sub">…</td><td class="num sub">…</td><td class="num sub">…</td><td class="num sub">…</td></tr>
+            <tr><td><strong>499</strong></td><td class="num">26.3 °C</td><td class="num">72 %</td><td class="num">14.1 km/h</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5 REPRESENTACION -->
+    <section class="slide">
+      <p class="eyebrow">03 · Representación de los datos</p>
+      <h2>Arreglos paralelos por variable</h2>
+      <div class="grid g2">
+        <div>
+          <div class="card"><h3>Datos actuales</h3>
+<pre>temperatura[500]
+humedad[500]
+viento[500]</pre></div>
+          <div class="card accent" style="margin-top:1rem"><h3>Predicciones</h3>
+<pre>temperaturaSiguiente[500]
+humedadSiguiente[500]
+vientoSiguiente[500]</pre></div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:.6rem">
+          <div class="node hi" style="align-self:center">Región i · temp[i] · hum[i] · viento[i]</div>
+          <div style="text-align:center" class="arrow">↓</div>
+          <div class="node" style="align-self:center;border-color:var(--amber);color:var(--amber)">Modelo de predicción</div>
+          <div style="text-align:center" class="arrow">↓</div>
+          <div class="node hi" style="align-self:center">tempSig[i] · humSig[i] · vientoSig[i]</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 MODELO -->
+    <section class="slide">
+      <p class="eyebrow">04 · Modelo de predicción</p>
+      <h2>Modelos lineales simplificados</h2>
+      <p>Las condiciones futuras dependen linealmente de las actuales:</p>
+      <div style="display:flex;flex-direction:column;gap:.7rem">
+        <div class="formula">T<span class="sub">sig</span> = a₀ + a₁·T<span class="sub">act</span> + a₂·H<span class="sub">act</span> + a₃·V<span class="sub">act</span></div>
+        <div class="formula">H<span class="sub">sig</span> = b₀ + b₁·T<span class="sub">act</span> + b₂·H<span class="sub">act</span> + b₃·V<span class="sub">act</span></div>
+        <div class="formula">V<span class="sub">sig</span> = c₀ + c₁·T<span class="sub">act</span> + c₂·H<span class="sub">act</span> + c₃·V<span class="sub">act</span></div>
+      </div>
+      <p style="margin-top:1rem">Los coeficientes <strong>a</strong>, <strong>b</strong>, <strong>c</strong> son los parámetros del modelo.</p>
+    </section>
+
+    <!-- 7 POR QUE LINEAL -->
+    <section class="slide">
+      <p class="eyebrow">05 · Justificación</p>
+      <h2>¿Por qué un modelo lineal?</h2>
+      <p class="lead">El objetivo es estudiar <strong>programación paralela</strong>, no la precisión meteorológica.</p>
+      <div class="grid g3" style="margin-top:1rem">
+        <div class="card"><h3>Sencillo</h3><p style="margin:0">Fácil de implementar y de relacionar varias variables.</p></div>
+        <div class="card"><h3>Buena carga</h3><p style="margin:0">Produce muchas operaciones repetidas para las 500 regiones.</p></div>
+        <div class="card accent"><h3>Independiente</h3><p style="margin:0">Cada región se calcula por separado → paralelismo de datos directo.</p></div>
+      </div>
+    </section>
+
+    <!-- 8 FLUJO GENERAL -->
+    <section class="slide">
+      <p class="eyebrow">06 · Flujo general</p>
+      <h2>De los datos al rendimiento</h2>
+      <div class="flow" style="justify-content:center">
+        <span class="node">Generar 500 regiones</span><span class="arrow">→</span>
+        <span class="node">Temp · Humedad · Viento</span><span class="arrow">→</span>
+        <span class="node hi">Modelo de predicción</span>
+      </div>
+      <div class="flow" style="justify-content:center;margin:.8rem 0">
+        <span class="arrow">↓</span>
+      </div>
+      <div class="flow" style="justify-content:center">
+        <span class="node">Estadísticas</span><span class="arrow">→</span>
+        <span class="node" style="border-color:var(--amber);color:var(--amber)">Medir rendimiento</span><span class="arrow">→</span>
+        <span class="node">FIN</span>
+      </div>
+    </section>
+
+    <!-- 9 SECUENCIAL -->
+    <section class="slide">
+      <p class="eyebrow">07 · Versión secuencial</p>
+      <h2>Un único flujo de ejecución</h2>
+      <div class="grid g2">
+        <div>
+          <p>Un ciclo recorre las 500 regiones. Una región empieza <strong>solo cuando termina la anterior</strong>.</p>
+          <ul>
+            <li>Calcular temperatura, humedad y viento siguientes</li>
+            <li>Guardar los resultados</li>
+            <li>Acumular valores para las estadísticas</li>
+          </ul>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:.35rem;justify-content:center">
+          <div class="node">Región 0 · T · H · V</div>
+          <div class="arrow" style="text-align:center">↓</div>
+          <div class="node">Región 1 · T · H · V</div>
+          <div class="arrow" style="text-align:center">↓</div>
+          <div class="node sub">… secuencial …</div>
+          <div class="arrow" style="text-align:center">↓</div>
+          <div class="node">Región 499 · T · H · V</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 PSEUDO SECUENCIAL -->
+    <section class="slide">
+      <p class="eyebrow">08 · Pseudocódigo secuencial</p>
+      <h2>El bucle base</h2>
+      <pre><span class="c">// sumas ← 0 ; iniciar temporizador</span>
+<span class="k">PARA</span> i ← 0 <span class="k">HASTA</span> N-1
+    tempSig[i]   ← calcularTemperatura(temp[i], hum[i], viento[i])
+    humSig[i]    ← calcularHumedad(temp[i], hum[i], viento[i])
+    vientoSig[i] ← calcularViento(temp[i], hum[i], viento[i])
+
+    sumaTemp   ← sumaTemp   + tempSig[i]
+    sumaHum    ← sumaHum    + humSig[i]
+    sumaViento ← sumaViento + vientoSig[i]
+<span class="k">FIN PARA</span>
+<span class="c">// detener temporizador ; promedios = suma / N</span></pre>
+    </section>
+
+    <!-- 11 QUE PARALELIZAR -->
+    <section class="slide">
+      <p class="eyebrow">09 · Oportunidad</p>
+      <h2>Las regiones son independientes</h2>
+      <p>Para calcular <code class="inl">tempSig[20]</code> no se necesita <code class="inl">tempSig[19]</code> ni <code class="inl">tempSig[21]</code>. No hay dependencia entre iteraciones.</p>
+      <div class="threads" style="grid-template-columns:repeat(5,1fr);margin-top:1rem">
+        <div class="thread"><b>R0</b>→</div>
+        <div class="thread"><b>R1</b>→</div>
+        <div class="thread"><b>R2</b>→</div>
+        <div class="thread sub">…</div>
+        <div class="thread"><b>R499</b>→</div>
+      </div>
+      <p style="text-align:center;margin-top:1rem;color:var(--sky)">Pueden procesarse <strong style="color:var(--sky)">simultáneamente</strong> → ideal para paralelismo de datos.</p>
+    </section>
+
+    <!-- 12 PARALELISMO DATOS -->
+    <section class="slide">
+      <p class="eyebrow">10 · Paralelismo de datos</p>
+      <h2><code class="inl" style="font-size:.85em">#pragma omp parallel for</code></h2>
+      <p>En vez de un thread procesando las 500 iteraciones, OpenMP <strong>reparte las iteraciones</strong> entre los threads disponibles. Cada thread ejecuta el mismo algoritmo sobre regiones distintas.</p>
+      <div class="threads" style="margin-top:.5rem">
+        <div class="thread"><b>Thread 0</b>regiones asignadas → predicción</div>
+        <div class="thread"><b>Thread 1</b>regiones asignadas → predicción</div>
+        <div class="thread"><b>Thread 2</b>regiones asignadas → predicción</div>
+        <div class="thread"><b>Thread 3</b>regiones asignadas → predicción</div>
+      </div>
+    </section>
+
+    <!-- 13 PARALELISMO TAREAS -->
+    <section class="slide">
+      <p class="eyebrow">11 · Paralelismo de tareas</p>
+      <h2><code class="inl" style="font-size:.85em">#pragma omp sections</code></h2>
+      <p>Otra división: en lugar de repartir regiones, repartir <strong>tipos de trabajo</strong>. Cada sección se asigna a un thread distinto.</p>
+      <div class="grid g3" style="margin-top:.5rem">
+        <div class="card accent"><h3>Section 1</h3><p style="margin:0">Todas las temperaturas</p></div>
+        <div class="card accent"><h3>Section 2</h3><p style="margin:0">Todas las humedades</p></div>
+        <div class="card accent"><h3>Section 3</h3><p style="margin:0">Todos los vientos</p></div>
+      </div>
+      <pre style="margin-top:1rem"><span class="k">PARALLEL SECTIONS</span>
+  <span class="k">SECTION</span>  PARA i: calcular tempSig[i]
+  <span class="k">SECTION</span>  PARA i: calcular humSig[i]
+  <span class="k">SECTION</span>  PARA i: calcular vientoSig[i]
+<span class="k">FIN</span></pre>
+    </section>
+
+    <!-- 14 COMPARACION ESTRATEGIAS -->
+    <section class="slide">
+      <p class="eyebrow">12 · Comparación de estrategias</p>
+      <h2>Datos vs. tareas</h2>
+      <div class="grid g2">
+        <div class="card">
+          <h3 style="color:var(--sky)">Paralelismo de datos</h3>
+          <p>Cada thread toma <strong>algunas regiones</strong> y calcula para ellas temperatura + humedad + viento.</p>
+          <div class="chips"><span class="chip">T0 → regiones</span><span class="chip">T1 → regiones</span></div>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--amber)">Paralelismo de tareas</h3>
+          <p>Cada thread hace <strong>un tipo de trabajo</strong> sobre todas las regiones.</p>
+          <div class="chips"><span class="chip">T0 → temperaturas</span><span class="chip">T1 → humedades</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 CLAUSULAS -->
+    <section class="slide">
+      <p class="eyebrow">13 · Manejo de variables</p>
+      <h2>Cláusulas de OpenMP</h2>
+      <div class="card" style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Cláusula</th><th>Comportamiento</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inl">shared(x)</code></td><td>Todos los threads acceden a la <strong>misma</strong> variable/memoria</td></tr>
+            <tr><td><code class="inl">private(x)</code></td><td>Cada thread obtiene su <strong>propia copia</strong> (sin inicializar)</td></tr>
+            <tr><td><code class="inl">firstprivate(x)</code></td><td>Copia propia <strong>inicializada</strong> con el valor original</td></tr>
+            <tr><td><code class="inl">reduction(+:x)</code></td><td>Sumas parciales por thread, <strong>combinadas</strong> al final</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:1rem">Los <strong>arreglos son shared</strong> (todos acceden), pero cada thread modifica <strong>índices distintos</strong>; las variables temporales son <strong>private</strong>.</p>
+    </section>
+
+    <!-- 16 RACE CONDITION -->
+    <section class="slide">
+      <p class="eyebrow">14 · El problema</p>
+      <h2>Condición de carrera</h2>
+      <div class="grid g2">
+        <div>
+          <p>Al acumular sumas en una variable compartida, varios threads la modifican a la vez.</p>
+          <div class="callout">Con <code class="inl">suma = 10</code>, T0 suma 5 y T1 suma 7. El resultado correcto es <strong>22</strong>, pero si ambos leen 10 antes de escribir, uno sobrescribe al otro → resultado incorrecto.</div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:.5rem">
+          <div class="node">Thread 0</div><div class="node">Thread 1</div>
+          <div class="node">Thread 2</div><div class="node">Thread 3</div>
+          <div class="arrow" style="text-align:center">↓ todos a la vez ↓</div>
+          <div class="node" style="border-color:var(--heat);color:var(--heat)">sumaTemperatura ⚠</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 REDUCTION -->
+    <section class="slide">
+      <p class="eyebrow">15 · La solución</p>
+      <h2><code class="inl" style="font-size:.8em">reduction(+: suma)</code></h2>
+      <p>Cada thread acumula en una <strong>suma parcial independiente</strong>; al final de la región paralela OpenMP las <strong>combina</strong> — sin condiciones de carrera.</p>
+      <div class="flow" style="justify-content:center;margin-top:1rem">
+        <div style="display:flex;flex-direction:column;gap:.4rem">
+          <span class="node">T0 → parcial 0</span>
+          <span class="node">T1 → parcial 1</span>
+          <span class="node">T2 → parcial 2</span>
+          <span class="node">T3 → parcial 3</span>
+        </div>
+        <span class="arrow">→</span>
+        <span class="node hi" style="border-color:var(--green);color:var(--green);font-size:1.05em">SUMA FINAL</span>
+      </div>
+    </section>
+
+    <!-- 18 PSEUDO PARALELO -->
+    <section class="slide">
+      <p class="eyebrow">16 · Pseudocódigo paralelo</p>
+      <h2>Todo junto</h2>
+      <pre><span class="k">PARALLEL FOR</span>
+  <span class="a">shared</span>(temperatura, humedad, viento, resultados)
+  <span class="a">private</span>(variablesTemporales)
+  <span class="a">firstprivate</span>(parametrosIniciales)
+  <span class="a">reduction</span>(+: sumaTemp, sumaHum, sumaViento)
+
+  <span class="k">PARA</span> i ← 0 <span class="k">HASTA</span> N-1
+      calcular tempSig · humSig · vientoSig
+      acumular temperatura · humedad · viento
+  <span class="k">FIN PARA</span>
+<span class="k">FIN PARALLEL FOR</span>
+<span class="c">// detener temporizador ; calcular promedios</span></pre>
+    </section>
+
+    <!-- 19 ESTADISTICAS -->
+    <section class="slide">
+      <p class="eyebrow">17 · Estadísticas</p>
+      <h2>Promedios con <code class="inl" style="font-size:.7em">reduction</code></h2>
+      <div class="grid g3">
+        <div class="card"><div class="formula" style="border-left-color:var(--heat)">T<span class="sub">prom</span> = ΣT<span class="sub">sig</span> / 500</div></div>
+        <div class="card"><div class="formula" style="border-left-color:var(--sky)">H<span class="sub">prom</span> = ΣH<span class="sub">sig</span> / 500</div></div>
+        <div class="card"><div class="formula" style="border-left-color:var(--green)">V<span class="sub">prom</span> = ΣV<span class="sub">sig</span> / 500</div></div>
+      </div>
+      <p style="margin-top:1.2rem">También sirven para <strong>verificar</strong> que la versión secuencial y la paralela producen resultados equivalentes.</p>
+    </section>
+
+    <!-- 20 SPEEDUP -->
+    <section class="slide">
+      <p class="eyebrow">18 · Rendimiento</p>
+      <h2>Speedup</h2>
+      <div class="grid g2" style="align-items:center">
+        <div>
+          <p>Cuántas veces más rápida es la versión paralela respecto a la secuencial.</p>
+          <div class="formula" style="font-size:clamp(20px,2.6vw,32px)">S<span class="sub">p</span> = T<span class="sub">s</span> / T<span class="sub">p</span></div>
+          <p style="margin-top:1rem"><span class="sub">T<sub>s</sub> = tiempo secuencial · T<sub>p</sub> = tiempo paralelo</span></p>
+        </div>
+        <div class="card accent">
+          <h3>Ejemplo</h3>
+          <p style="margin:0 0 .6rem">T<sub>s</sub> = 8 s &nbsp; · &nbsp; T<sub>p</sub> = 2.5 s</p>
+          <div class="big">Sₚ = 3.2×</div>
+          <p style="margin:.6rem 0 0">≈ 3.2 veces más rápida que la secuencial.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 21 EFICIENCIA -->
+    <section class="slide">
+      <p class="eyebrow">19 · Rendimiento</p>
+      <h2>Eficiencia</h2>
+      <div class="grid g2" style="align-items:center">
+        <div>
+          <p>El Speedup no dice qué tan bien se usan los threads. La eficiencia sí.</p>
+          <div class="formula" style="font-size:clamp(20px,2.6vw,32px)">E<span class="sub">p</span> = S<span class="sub">p</span> / p</div>
+          <p style="margin-top:1rem"><span class="sub">p = cantidad de threads</span></p>
+        </div>
+        <div class="card accent">
+          <h3>Ejemplo</h3>
+          <p style="margin:0 0 .6rem">Sₚ = 3.2 &nbsp; · &nbsp; p = 4</p>
+          <div class="big">Eₚ = 80 %</div>
+          <p style="margin:.6rem 0 0">3.2 / 4 = 0.8 → aprovechamiento de los 4 threads.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 22 PRUEBAS TABLA -->
+    <section class="slide">
+      <p class="eyebrow">20 · Experimentos</p>
+      <h2>Tabla de resultados esperada</h2>
+      <p>Ejecutar con 1, 2, 4 y 8 threads; registrar tiempo, Speedup y eficiencia.</p>
+      <div class="card" style="overflow-x:auto">
+        <table>
+          <thead><tr><th class="num">Threads</th><th class="num">Tiempo</th><th class="num">Speedup</th><th class="num">Eficiencia</th></tr></thead>
+          <tbody>
+            <tr><td class="num"><strong>1</strong></td><td class="num">T₁</td><td class="num">1.00</td><td class="num">100 %</td></tr>
+            <tr><td class="num"><strong>2</strong></td><td class="num">T₂</td><td class="num">T₁/T₂</td><td class="num">S₂/2</td></tr>
+            <tr><td class="num"><strong>4</strong></td><td class="num">T₄</td><td class="num">T₁/T₄</td><td class="num">S₄/4</td></tr>
+            <tr><td class="num"><strong>8</strong></td><td class="num">T₈</td><td class="num">T₁/T₈</td><td class="num">S₈/8</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:.9rem;color:var(--amber)">Los valores reales se obtienen al ejecutar — <strong style="color:var(--amber)">no se inventan</strong>.</p>
+    </section>
+
+    <!-- 23 OVERHEAD -->
+    <section class="slide">
+      <p class="eyebrow">21 · Consideración clave</p>
+      <h2>Más threads ≠ más rendimiento</h2>
+      <div class="grid g2">
+        <div>
+          <p>OpenMP añade costos: creación de threads, distribución del trabajo, sincronización, acceso a memoria compartida y combinación del <code class="inl">reduction</code>.</p>
+          <div class="callout">Con solo 500 registros y cálculos pequeños, el costo de administrar threads puede igualar o superar al cálculo: <strong>T<sub>p</sub> ≥ T<sub>s</sub></strong> y <strong>S<sub>p</sub> ≤ 1</strong>. No es un error — el problema puede ser demasiado pequeño.</div>
+        </div>
+        <div class="card accent" style="justify-content:center;display:flex;flex-direction:column">
+          <h3>La verdadera pregunta</h3>
+          <p style="font-size:clamp(17px,2vw,23px);color:var(--ink);margin:0">¿<strong>Cuándo</strong> vale la pena paralizar este problema?</p>
+          <p style="margin:.8rem 0 0">La experimentación revela si el costo del cálculo justifica los múltiples threads.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 24 USO OPENMP -->
+    <section class="slide">
+      <p class="eyebrow">22 · Resumen técnico</p>
+      <h2>Cada herramienta, su porqué</h2>
+      <div class="card" style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Herramienta</th><th>Aplicación</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inl">parallel for</code></td><td>Distribuir las 500 regiones entre threads</td></tr>
+            <tr><td><code class="inl">sections</code></td><td>Separar temperatura, humedad y viento en tareas</td></tr>
+            <tr><td><code class="inl">shared</code></td><td>Compartir arreglos de datos y resultados</td></tr>
+            <tr><td><code class="inl">private</code></td><td>Variables temporales independientes</td></tr>
+            <tr><td><code class="inl">firstprivate</code></td><td>Copiar parámetros iniciales a cada thread</td></tr>
+            <tr><td><code class="inl">reduction</code></td><td>Sumas globales sin condiciones de carrera</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="bar">
+    <span class="title">Simulación de Predicción Climática · C + OpenMP</span>
+    <button class="btn" id="prev" aria-label="Anterior">‹</button>
+    <div class="prog"><span id="progbar"></span></div>
+    <button class="btn" id="next" aria-label="Siguiente">›</button>
+    <span class="count" id="count">1 / 23</span>
+    <button class="btn tgl" id="theme" aria-label="Cambiar tema">◐</button>
+  </nav>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const bar=document.getElementById('progbar');
+  const count=document.getElementById('count');
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('on',k===i));
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    count.textContent=(i+1)+' / '+slides.length;
+  }
+  document.getElementById('next').onclick=()=>show(i+1);
+  document.getElementById('prev').onclick=()=>show(i-1);
+  addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){show(i+1);e.preventDefault();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+    else if(e.key==='Home')show(0);
+    else if(e.key==='End')show(slides.length-1);
+    else if(e.key.toLowerCase()==='t')toggleTheme();
+  });
+  // swipe
+  let x0=null;
+  addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});
+  addEventListener('touchend',e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50)show(i+(dx<0?1:-1));x0=null;},{passive:true});
+  function toggleTheme(){
+    const r=document.documentElement;
+    const cur=r.getAttribute('data-theme')|| (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    r.setAttribute('data-theme',cur==='dark'?'light':'dark');
+  }
+  document.getElementById('theme').onclick=toggleTheme;
+  show(0);
+</script>
