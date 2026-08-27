@@ -3,7 +3,6 @@
 # Uso: ./run_benchmark.sh [N] [repeat] [threads_list]
 set -euo pipefail
 cd "$(dirname "$0")/.."
-BIN=bin/climate_sim
 
 N=${1:-2000000}
 REPEAT=${2:-30}
@@ -12,6 +11,8 @@ OUT=results/results.csv
 
 make -s
 mkdir -p results
+BIN=bin/climate_sim
+[ -f "${BIN}.exe" ] && BIN="${BIN}.exe"  # Windows/MinGW
 echo "mode,N,repeat,threads,time,avgT,avgH,avgV" > "$OUT"
 
 parse_and_append() {
