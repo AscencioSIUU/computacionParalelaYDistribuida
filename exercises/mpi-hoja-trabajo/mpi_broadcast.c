@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #ifndef STUDENT_NAME
-#define STUDENT_NAME "Nesstor07"
+#define STUDENT_NAME "Ernesto"
 #endif
 
 #define MESSAGE "Hello World de " STUDENT_NAME
