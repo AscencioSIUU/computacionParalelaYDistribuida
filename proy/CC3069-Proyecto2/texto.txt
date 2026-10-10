@@ -1,0 +1,32 @@
+Este documento es una prueba preparada para el Proyecto 2 de Computacion Paralela
+y Distribuida de la Universidad del Valle de Guatemala. El objetivo del ejercicio
+es tomar un algoritmo de busqueda de llave privada por fuerza bruta y mejorarlo
+con el estandar de paso de mensajes conocido como MPI. El modelo de memoria
+distribuida permite interconectar maquinas homogeneas y heterogeneas sin depender
+de la topologia de la red, lo que hace que la solucion sea altamente escalable y
+portable entre distintos sistemas operativos.
+
+El cifrado por bloques DES opera sobre bloques de ocho bytes y utiliza una llave
+de cincuenta y seis bits efectivos. Para descifrar un texto se prueban de manera
+sistematica todas las combinaciones posibles de la llave hasta encontrar una que
+produce un texto legible. Para saber si una candidata es la correcta se verifica
+que el texto descifrado contenga una frase clave conocida de antemano, usando la
+funcion de busqueda de subcadenas de la biblioteca estandar de C. Si la frase
+aparece, entonces la llave probada es la llave privada original.
+
+La distribucion del espacio de busqueda entre varios procesos es la parte central
+del analisis de rendimiento. Cuando el trabajo se reparte en bloques contiguos,
+el proceso que recibe el sub rango donde vive la llave es el unico que realmente
+la encuentra, y el tiempo depende de que tan adentro de su bloque se ubica. Una
+llave de valor pequenno se halla casi de inmediato, mientras que una llave de
+valor grande obliga a recorrer casi todo el bloque asignado. Por esta razon el
+speedup aparente no es constante y debe medirse con varias llaves distintas,
+tomando la mediana de varias ejecuciones para obtener un resultado
+representativo y comparable entre configuraciones de varios procesos.
+
+El equipo documenta el entorno de pruebas, los tiempos obtenidos, el speedup y la
+eficiencia alcanzada, y discute por que el problema se considera vergonzosamente
+paralelo. Tambien se explica el impacto que tiene la eleccion de la llave sobre la
+consistencia de las mediciones, concluyendo que una llave ubicada cerca del final
+del rango explorado ofrece la medicion mas justa del paralelismo real del
+algoritmo de fuerza bruta implementado con Open MPI.
