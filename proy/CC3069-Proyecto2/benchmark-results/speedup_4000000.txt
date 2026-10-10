@@ -1,0 +1,7 @@
+Rango 2^22, clave 4000000, mediana de 5 ejecuciones
+Secuencial: 4.156481 s
+
+Procesos   Tiempo (s)     Speedup    Eficiencia
+2          2.085070       1.99       1.00      
+3          1.331061       3.12       1.04      
+4          0.992048       4.19       1.05      

@@ -1,0 +1,15 @@
+digraph TRYKEY {
+  rankdir=TB;
+  node [shape=box, style="rounded,filled", fillcolor="#eef3fb", fontname="Helvetica", fontsize=11];
+  edge [fontname="Helvetica", fontsize=9];
+  IN [label="cipher[] (compartido, no se toca)\n+ candidata", shape=parallelogram, fillcolor="#e6f0ff"];
+  M  [label="memcpy(tmp, cipher, clen)\ncopia para no destruir el\ncifrado original compartido"];
+  D  [label="des_decrypt(candidata, tmp, clen)\ndescifra SOLO los primeros\nCHECK_BYTES (la frase vive al inicio)"];
+  T  [label="tmp[clen] = 0\n(termina la cadena para strstr)"];
+  S  [label="strstr(tmp, SEARCH)"];
+  Y  [label="!= NULL -> clave correcta\n(return 1)", fillcolor="#d5f5dd"];
+  N  [label="== NULL -> candidata incorrecta\n(return 0)", fillcolor="#f7d9d9"];
+  IN -> M -> D -> T -> S;
+  S -> Y [label="encontrada"];
+  S -> N [label="no esta"];
+}

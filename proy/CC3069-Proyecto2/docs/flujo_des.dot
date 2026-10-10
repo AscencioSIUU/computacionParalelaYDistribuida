@@ -1,0 +1,32 @@
+digraph DES {
+  rankdir=TB;
+  node [shape=box, style="rounded,filled", fillcolor="#eef3fb", fontname="Helvetica", fontsize=11];
+  edge [fontname="Helvetica", fontsize=9];
+
+  subgraph cluster_key {
+    label="Expansion de clave (Key Schedule)"; style=dashed; color="#c9922b";
+    K   [label="Clave de 64 bits\n(56 efectivos + 8 paridad)", fillcolor="#fde9c9"];
+    PC1 [label="PC-1\n(descarta paridad -> 56 bits)", fillcolor="#fde9c9"];
+    SHIFT [label="16 rondas:\nLS (desplazamientos ciclicos\nde C y D)", fillcolor="#fde9c9"];
+    PC2 [label="PC-2\n16 subclaves K1..K16\n(48 bits c/u)", fillcolor="#fde9c9"];
+    K -> PC1 -> SHIFT -> PC2;
+  }
+
+  subgraph cluster_enc {
+    label="CIFRADO de un bloque (64 bits)"; style=dashed; color="#2b6cb0";
+    P  [label="Texto plano (bloque 64 bits)", shape=parallelogram, fillcolor="#e6f0ff"];
+    IP [label="Permutacion inicial (IP)"];
+    SPLIT [label="Dividir en L0 (32b) | R0 (32b)"];
+    ROUND [label="16 rondas Feistel i=1..16:\nLi = R(i-1)\nRi = L(i-1) XOR f(R(i-1), Ki)\nf: Expansion E -> XOR Ki ->\n8 S-boxes -> Permutacion P"];
+    SWAP [label="Swap final (R16 | L16)"];
+    FP [label="Permutacion final (IP^-1)"];
+    C  [label="Texto cifrado (64 bits)", shape=parallelogram, fillcolor="#e6f0ff"];
+    P -> IP -> SPLIT -> ROUND -> SWAP -> FP -> C;
+  }
+
+  note [shape=note, fillcolor="#fff6d5",
+        label="Descifrado = mismo algoritmo\npero subclaves en orden inverso\nK16, K15, ..., K1.\nModo ECB: cada bloque de 8 bytes\nse procesa de forma independiente."];
+
+  PC2 -> ROUND [label="K1..K16", color="#c9922b"];
+  C -> note [style=invis];
+}

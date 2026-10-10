@@ -1,0 +1,14 @@
+digraph ENCDEC {
+  rankdir=LR;
+  node [shape=box, style="rounded,filled", fillcolor="#eef3fb", fontname="Helvetica", fontsize=11];
+  edge [fontname="Helvetica", fontsize=9];
+  A [label="candidata (uint64_t)\n56 bits", fillcolor="#fde9c9"];
+  B [label="make_des_key:\n7 bits por byte en bits 1..7\n+ DES_set_odd_parity\n-> DES_cblock de 8 bytes"];
+  C [label="DES_set_key_unchecked\n-> key schedule (K1..K16)"];
+  D [label="bucle por bloques de 8 bytes:\nDES_ecb_encrypt(.., ENCRYPT/DECRYPT)\nin-place sobre el buffer"];
+  E [label="buffer cifrado / descifrado\n(len multiplo de 8)", shape=parallelogram, fillcolor="#e6f0ff"];
+  A -> B -> C -> D -> E;
+  note [shape=note, fillcolor="#fff6d5",
+        label="des_encrypt = enc=1 (DES_ENCRYPT)\ndes_decrypt = enc=0 (DES_DECRYPT)\nReemplazan a encrypt()/decrypt() del\nbruteforce_.c (ecb_crypt de rpc)."];
+  E -> note [style=invis];
+}
