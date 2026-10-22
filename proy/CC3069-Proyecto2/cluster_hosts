@@ -1,0 +1,5 @@
+# Hostfile del cluster local (Parte 2, simulacion multi-contenedor).
+# slots = procesos MPI por nodo. Total = 6 (2+2+2).
+maestro slots=2
+worker1 slots=2
+worker2 slots=2

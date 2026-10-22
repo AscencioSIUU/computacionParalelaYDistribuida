@@ -1,0 +1,11 @@
+# Hostfile para el cluster FISICO (despliegue real sobre el router).
+# Una linea por computadora del equipo. Cambien las IPs por las que el router
+# les asigno (p. ej. 192.168.1.X, veanlas con `hostname -I` o `ip addr`).
+#
+#   slots      = procesos MPI a lanzar en ese nodo (<= nucleos logicos).
+#   max_slots  = tope fisico; impide oversubscription. DES tiene overhead
+#                masivo por cambio de contexto si se piden mas hilos que nucleos.
+#
+192.168.1.10 slots=4 max_slots=4   # Nodo Maestro
+192.168.1.11 slots=8 max_slots=8   # Worker 1 (8 nucleos)
+192.168.1.12 slots=4 max_slots=4   # Worker 2
