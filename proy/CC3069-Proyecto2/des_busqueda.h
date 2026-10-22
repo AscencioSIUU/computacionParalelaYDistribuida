@@ -34,7 +34,9 @@
 #define DEFAULT_TEXTFILE "texto.txt"
 /* Frase clave (crib) que debe aparecer como substring del texto descifrado.
  * ASCII puro para evitar diferencias de codificacion en strstr. */
+#ifndef SEARCH
 #define SEARCH "Proyecto 2 de Computacion Paralela"
+#endif
 /* La frase clave vive al inicio del texto: para probar una candidata basta
  * descifrar los primeros CHECK_BYTES (optimizacion de rendimiento). El texto
  * completo solo se descifra al encontrar la clave, para mostrarlo. */
