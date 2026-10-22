@@ -9,6 +9,8 @@ Entorno de pruebas: macOS (Apple Silicon, M5 Pro, 15 núcleos), `clang`/`mpicc`,
 
 Archivos: `bruteforce.c` (original del enunciado, referencia sin modificar), `des_busqueda.h` (utilidades DES portadas a OpenSSL), `bruteforce_des_secuencial.c`, `bruteforce_des_mpi.c`, `Makefile`, `bench.sh`, `texto.txt`.
 
+**Repositorio (ejecución):** <https://github.com/AscencioSIUU/computacionParalelaYDistribuida> — el proyecto está en `proy/CC3069-Proyecto2`.
+
 > **Nota de portabilidad.** El `bruteforce.c` del enunciado usa `<rpc/des_crypt.h>` (`ecb_crypt`, `des_setparity`), disponible solo en glibc (Linux). No compila en macOS ni en Windows nativo. Se porta el DES al API de bajo nivel de OpenSSL (`DES_ecb_encrypt`, `DES_set_key_unchecked`, `DES_set_odd_parity`), que compila en los tres sistemas. Las firmas `encrypt`/`decrypt`/`tryKey` se conservan para describir el mismo programa.
 
 # 1. Investigación sobre DES
@@ -53,6 +55,8 @@ El `bruteforce.c` original cifra un texto conocido con una clave DES y luego **p
 ## Compilación y ejecución
 
 ```
+git clone https://github.com/AscencioSIUU/computacionParalelaYDistribuida.git
+cd computacionParalelaYDistribuida/proy/CC3069-Proyecto2
 make                 # macOS (Homebrew). Linux/WSL: make OPENSSL=/usr
 ./bruteforce_des_secuencial 20 12345
 mpirun -np 4 ./bruteforce_des_mpi 20 12345
