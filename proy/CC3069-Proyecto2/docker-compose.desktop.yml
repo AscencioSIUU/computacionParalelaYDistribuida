@@ -1,0 +1,41 @@
+x-node: &node
+  build: .
+  image: mpi-cluster-desktop
+  platform: linux/amd64
+  cap_add: [NET_ADMIN]
+  devices: ["/dev/net/tun:/dev/net/tun"]
+  command: ["/usr/sbin/sshd", "-D", "-e", "-o", "PermitTunnel=point-to-point"]
+  healthcheck:
+    test: ["CMD-SHELL", "ssh-keyscan -T 1 127.0.0.1 >/dev/null 2>&1"]
+    interval: 2s
+    timeout: 3s
+    retries: 15
+    start_period: 5s
+
+services:
+  master:
+    <<: *node
+    profiles: [master]
+    hostname: mpi-master
+    environment:
+      MPI_DESKTOP_ROLE: master
+    volumes: [master-ssh:/root/.ssh]
+    networks: [master-network]
+
+  worker:
+    <<: *node
+    profiles: [worker]
+    hostname: mpi-worker
+    environment:
+      MPI_DESKTOP_ROLE: worker
+    ports: ["${MPI_BIND_IP:-127.0.0.1}:${MPI_SSH_PORT:-2222}:22"]
+    volumes: [worker-ssh:/root/.ssh]
+    networks: [worker-network]
+
+networks:
+  master-network:
+  worker-network:
+
+volumes:
+  master-ssh:
+  worker-ssh:

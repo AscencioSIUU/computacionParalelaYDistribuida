@@ -5,3 +5,4 @@ bruteforce_des_mpi
 .DS_Store
 
 TEMP/
+.mpi-desktop/

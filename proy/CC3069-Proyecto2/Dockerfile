@@ -24,7 +24,8 @@ COPY docker/*.sh /usr/local/bin/
 RUN sed -i 's/\r$//' /usr/local/bin/*.sh \
     && chmod 755 /usr/local/bin/*.sh \
     && ln -s /usr/local/bin/mpi-trust.sh /usr/local/bin/mpi-trust \
-    && ln -s /usr/local/bin/mpi-run.sh /usr/local/bin/mpi-run
+    && ln -s /usr/local/bin/mpi-run.sh /usr/local/bin/mpi-run \
+    && ln -s /usr/local/bin/mpi-desktop.sh /usr/local/bin/mpi-desktop
 
 WORKDIR /cluster
 COPY des_busqueda.h bruteforce_des_mpi.c bruteforce_des_secuencial.c texto.txt ./

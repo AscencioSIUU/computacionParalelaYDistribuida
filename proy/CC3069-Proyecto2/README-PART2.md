@@ -1,5 +1,10 @@
 # Proyecto 2: Open MPI con Docker
 
+**Windows y Mac sin VM adicional:** [README-DESKTOP.md](README-DESKTOP.md)
+describe el maestro Windows y worker Apple Silicon con Docker Desktop, imagen
+amd64 y tunel SSH privado. La sección B de este documento conserva la alternativa
+con Docker Engine nativo en Linux.
+
 El proyecto utiliza **Open MPI**, no OpenMP. MPI distribuye procesos entre
 computadoras; OpenMP distribuye hilos dentro de una computadora. El programa
 actual no implementa una versión híbrida MPI/OpenMP.
@@ -67,7 +72,7 @@ disponibles por contenedor.
 
 ### Plataforma y requisitos
 
-El despliegue LAN utiliza **Docker Engine nativo en Linux**. En Windows o macOS,
+Esta alternativa LAN utiliza **Docker Engine nativo en Linux**. En Windows o macOS,
 cada participante necesita una VM Linux con adaptador de red en modo **puente**,
 con Docker instalado dentro de esa VM. Una VM con NAT o WSL con su configuración
 predeterminada no equivale a este despliegue.

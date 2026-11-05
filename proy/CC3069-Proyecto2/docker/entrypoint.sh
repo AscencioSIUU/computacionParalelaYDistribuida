@@ -11,4 +11,8 @@ for name in id_ed25519 host_ed25519_key; do
 done
 touch /root/.ssh/authorized_keys /root/.ssh/known_hosts
 chmod 600 /root/.ssh/authorized_keys /root/.ssh/known_hosts
+if [[ -n "${MPI_DESKTOP_ROLE:-}" ]]; then
+    [[ "$MPI_DESKTOP_ROLE" == master || "$MPI_DESKTOP_ROLE" == worker ]] || exit 1
+    printf '%s\n' "$MPI_DESKTOP_ROLE" > /run/mpi-desktop-role
+fi
 exec "$@"
