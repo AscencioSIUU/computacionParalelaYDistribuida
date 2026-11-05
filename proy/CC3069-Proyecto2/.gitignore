@@ -7,3 +7,4 @@ bruteforce_des_mpi_dinamico
 
 TEMP/
 .mpi-desktop/
+*.pub

@@ -106,6 +106,9 @@ bash ./cluster.sh down
 
 ### Súper-clúster en clase (5–6 computadoras)
 
+Guía paso a paso para el día de la clase (Wi-Fi D-Link, logs y evidencia):
+[CLASE-PARTE3.md](CLASE-PARTE3.md).
+
 Se usa el flujo LAN de [README-PART2.md](README-PART2.md) §B (firewall con TCP
 22, 20000–20099 y 21000–21099; intercambio de claves con `mpi-trust`;
 `mpi-run`). Reglas adicionales de esta parte:
