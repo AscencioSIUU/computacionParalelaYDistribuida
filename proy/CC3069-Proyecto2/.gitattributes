@@ -1,0 +1,5 @@
+*.sh text eol=lf
+*.ps1 text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+cluster_hosts* text eol=lf

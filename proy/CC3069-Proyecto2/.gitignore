@@ -3,3 +3,5 @@ bruteforce_des_secuencial
 bruteforce_des_mpi
 *.o
 .DS_Store
+
+TEMP/

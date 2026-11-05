@@ -5,6 +5,9 @@ author: "Ernesto Ascencio (23009), Hugo Barillas (23556)"
 geometry: margin=2cm
 ---
 
+**Docker y varias computadoras:** la guía vigente está en [README-PART2.md](README-PART2.md).
+El proyecto utiliza Open MPI, no OpenMP.
+
 Entorno de pruebas: macOS (Apple Silicon, M5 Pro, 15 núcleos), `clang`/`mpicc`, OpenSSL 3 (`brew install openssl@3`), Open MPI 5.0.11 (`brew install open-mpi`). En Linux/WSL equivale a `sudo apt install libssl-dev openmpi-bin libopenmpi-dev` y compilar con `make OPENSSL=/usr`.
 
 Archivos: `bruteforce.c` (original del enunciado, referencia sin modificar), `des_busqueda.h` (utilidades DES portadas a OpenSSL), `bruteforce_des_secuencial.c`, `bruteforce_des_mpi.c`, `Makefile`, `bench.sh`, `texto.txt`.

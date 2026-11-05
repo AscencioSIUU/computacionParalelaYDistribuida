@@ -1,0 +1,16 @@
+services:
+  node:
+    build: .
+    image: mpi-cluster-image
+    container_name: mpi_node
+    network_mode: host
+    volumes: [node-ssh:/root/.ssh]
+    healthcheck:
+      test: ["CMD-SHELL", "ssh-keyscan -T 1 127.0.0.1 >/dev/null 2>&1"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+volumes:
+  node-ssh:

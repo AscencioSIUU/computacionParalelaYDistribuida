@@ -1,18 +1,8 @@
-# Mantener el contexto de build pequeno: solo fuentes + texto se copian.
-bruteforce_des_secuencial
-bruteforce_des_mpi
-bruteforce
-bruteforce_secuencial
-bruteforce.c
-*.o
-docs/
-benchmark-results/
-*.pdf
-*.md
-*.sh
-docker-compose.yml
-cluster_hosts*
-Dockerfile
-.dockerignore
-.gitignore
-.DS_Store
+*
+!Dockerfile
+!des_busqueda.h
+!bruteforce_des_mpi.c
+!bruteforce_des_secuencial.c
+!texto.txt
+!docker/
+!docker/*.sh

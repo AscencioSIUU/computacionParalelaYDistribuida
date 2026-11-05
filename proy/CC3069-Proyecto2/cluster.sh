@@ -1,86 +1,76 @@
 #!/usr/bin/env bash
-# ---------------------------------------------------------------------------
-# Orquestador del cluster MPI local (CC3069 Proyecto 2, Parte 2).
-# Levanta maestro + 2 workers en contenedores Docker sobre una red bridge y
-# reproduce el flujo real del despliegue fisico: SSH sin contrasena entre nodos
-# y mpirun --hostfile restringido a la subred del cluster.
-#
-#   ./cluster.sh build                 construye la imagen mpi-cluster-image
-#   ./cluster.sh up                    levanta los 3 contenedores
-#   ./cluster.sh validate              corre la tabla de validacion del enunciado
-#   ./cluster.sh run [bits] [clave]    ataque distribuido (def. 22 4000000)
-#   ./cluster.sh ips                   muestra la IP de cada contenedor
-#   ./cluster.sh shell                 abre bash en el maestro
-#   ./cluster.sh down                  destruye el cluster
-# ---------------------------------------------------------------------------
 set -euo pipefail
 cd "$(dirname "$0")"
 
-IMAGE=mpi-cluster-image
-SUBNET=10.42.0.0/24
-MAESTRO=mpi_maestro
 NODES=(mpi_maestro mpi_worker1 mpi_worker2)
-HOSTFILE=cluster_hosts
+HOSTS=(maestro worker1 worker2)
 
-total_slots() {
-  awk '!/^#/ && /slots=/ { for (i=1;i<=NF;i++) if ($i ~ /^slots=/) { split($i,a,"="); s+=a[2] } } END { print s+0 }' "$HOSTFILE"
+trust_nodes() {
+    for i in "${!NODES[@]}"; do
+        client_key=$(docker exec "${NODES[$i]}" cat /root/.ssh/id_ed25519.pub)
+        host_key=$(docker exec "${NODES[$i]}" cat /root/.ssh/host_ed25519_key.pub)
+        for node in "${NODES[@]}"; do
+            docker exec "$node" mpi-trust "${HOSTS[$i]}" "$client_key" "$host_key"
+        done
+    done
+}
+
+copy_hostfile() {
+    docker cp cluster_hosts mpi_maestro:/cluster/cluster_hosts
+    docker exec mpi_maestro sed -i 's/\r$//' /cluster/cluster_hosts
 }
 
 case "${1:-}" in
-  build)
-    docker build -t "$IMAGE" .
-    ;;
-
-  up)
-    docker compose up -d
-    echo "Esperando sshd en los nodos..."
-    for n in "${NODES[@]}"; do
-      until docker exec "$n" bash -c 'ss -ltn 2>/dev/null | grep -q ":22 "'; do sleep 0.3; done
-      echo "  $n listo"
-    done
-    ;;
-
-  validate)
-    echo "== 1) mpicc --version =="
-    docker run --rm "$IMAGE" mpicc --version | head -1
-    echo
-    echo "== 2) mpirun -np 2 echo (debe imprimir 2 veces) =="
-    docker run --rm "$IMAGE" mpirun -np 2 echo "Proceso MPI ejecutado"
-    echo
-    echo "== 3) SSH maestro -> workers sin contrasena =="
-    for w in worker1 worker2; do
-      r=$(docker exec "$MAESTRO" ssh -o BatchMode=yes "$w" hostname)
-      echo "maestro -> $w  OK (sin contrasena; hostname remoto: $r)"
-    done
-    ;;
-
-  run)
-    bits="${2:-22}"; key="${3:-4000000}"; np="$(total_slots)"
-    docker cp "$HOSTFILE" "$MAESTRO":/cluster/cluster_hosts
-    echo "Nodos del hostfile:"; grep -v '^#' "$HOSTFILE" | sed 's/^/  /'
-    echo "mpirun -np $np, subred $SUBNET"; echo
-    docker exec "$MAESTRO" mpirun --hostfile /cluster/cluster_hosts \
-      --mca btl_tcp_if_include "$SUBNET" --mca oob_tcp_if_include "$SUBNET" \
-      --mca btl tcp,self \
-      -np "$np" /cluster/bruteforce "$bits" "$key"
-    ;;
-
-  ips)
-    for n in "${NODES[@]}"; do
-      printf '%-14s %s\n' "$n" "$(docker exec "$n" hostname -I | awk '{print $1}')"
-    done
-    ;;
-
-  shell)
-    docker exec -it "$MAESTRO" bash
-    ;;
-
-  down)
-    docker compose down
-    ;;
-
-  *)
-    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
-    exit 1
-    ;;
+    build)
+        docker build -t mpi-cluster-image .
+        ;;
+    up)
+        docker compose up -d --build --wait --wait-timeout 60
+        trust_nodes
+        ;;
+    trust)
+        trust_nodes
+        ;;
+    validate)
+        docker exec mpi_maestro mpicc --version
+        for peer in worker1 worker2; do
+            docker exec mpi_maestro ssh "$peer" hostname
+        done
+        copy_hostfile
+        docker exec mpi_maestro timeout 30s mpirun \
+            --hostfile /cluster/cluster_hosts \
+            --mca btl_tcp_if_include 10.42.0.0/24 \
+            --mca oob_tcp_if_include 10.42.0.0/24 \
+            -np 6 hostname
+        coverage=$(docker exec mpi_maestro timeout 30s mpi-run \
+            /cluster/cluster_hosts 10.42.0.0/24 3 10 999999)
+        printf '%s\n' "$coverage"
+        [[ "$coverage" == *"Candidatas probadas: 1024"* ]]
+        recovery=$(docker exec mpi_maestro timeout 30s mpi-run \
+            /cluster/cluster_hosts 10.42.0.0/24 6 16 12345)
+        printf '%s\n' "$recovery"
+        [[ "$recovery" == *"Clave encontrada: 12345"* ]]
+        ;;
+    run)
+        copy_hostfile
+        np=$(awk '!/^#/ { for (i=1;i<=NF;i++) if ($i ~ /^slots=/) { split($i,a,"="); s+=a[2] } } END { print s+0 }' cluster_hosts)
+        docker exec mpi_maestro mpi-run /cluster/cluster_hosts \
+            10.42.0.0/24 "$np" "${2:-22}" "${3:-4000000}"
+        ;;
+    ips)
+        for node in "${NODES[@]}"; do
+            printf '%s: ' "$node"
+            docker exec "$node" hostname -I
+        done
+        ;;
+    shell)
+        docker exec -it mpi_maestro bash
+        ;;
+    down)
+        docker compose down
+        ;;
+    *)
+        echo "Uso: ./cluster.sh {build|up|trust|validate|run [bits] [clave]|ips|shell|down}" >&2
+        exit 1
+        ;;
 esac

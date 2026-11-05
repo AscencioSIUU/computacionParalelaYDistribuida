@@ -1,30 +1,32 @@
-# Cluster MPI local: 1 maestro + 2 workers en una red bridge dedicada.
-# Reproduce el despliegue fisico (SSH + mpirun --hostfile) en una sola maquina.
-# Uso: ./cluster.sh up   (o: docker compose up -d --build)
+x-node: &node
+  image: mpi-cluster-image
+  networks: [mpicluster]
+  healthcheck:
+    test: ["CMD-SHELL", "ssh-keyscan -T 1 127.0.0.1 >/dev/null 2>&1"]
+    interval: 2s
+    timeout: 3s
+    retries: 15
+    start_period: 5s
+
 services:
   maestro:
+    <<: *node
     build: .
-    image: mpi-cluster-image
     container_name: mpi_maestro
     hostname: maestro
-    networks: [mpicluster]
-    tty: true
+    volumes: [maestro-ssh:/root/.ssh]
 
   worker1:
-    image: mpi-cluster-image
+    <<: *node
     container_name: mpi_worker1
     hostname: worker1
-    depends_on: [maestro]
-    networks: [mpicluster]
-    tty: true
+    volumes: [worker1-ssh:/root/.ssh]
 
   worker2:
-    image: mpi-cluster-image
+    <<: *node
     container_name: mpi_worker2
     hostname: worker2
-    depends_on: [maestro]
-    networks: [mpicluster]
-    tty: true
+    volumes: [worker2-ssh:/root/.ssh]
 
 networks:
   mpicluster:
@@ -32,3 +34,8 @@ networks:
     ipam:
       config:
         - subnet: 10.42.0.0/24
+
+volumes:
+  maestro-ssh:
+  worker1-ssh:
+  worker2-ssh:

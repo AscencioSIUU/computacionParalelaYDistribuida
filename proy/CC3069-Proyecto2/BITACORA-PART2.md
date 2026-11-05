@@ -1,5 +1,10 @@
 # Bitácora — Proyecto 2, Parte 2: HPC con Open MPI colectivo (Docker)
 
+> **Registro histórico.** Las referencias a claves privadas horneadas y a Docker
+> Desktop host networking corresponden al despliegue anterior. La configuración
+> vigente genera claves por nodo y utiliza Linux nativo o VM con red puente para
+> la LAN. La guía actual está en [README-PART2.md](README-PART2.md).
+
 **Curso:** CC3069 Computación Paralela y Distribuida — Universidad del Valle de Guatemala
 **Equipo:** Ernesto Ascencio (23009), Hugo Barillas (23556)
 **Objetivo de la parte 2:** llevar el ataque de fuerza bruta DES de la Parte 1 (un solo
