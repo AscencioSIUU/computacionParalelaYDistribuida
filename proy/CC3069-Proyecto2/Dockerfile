@@ -28,10 +28,12 @@ RUN sed -i 's/\r$//' /usr/local/bin/*.sh \
     && ln -s /usr/local/bin/mpi-desktop.sh /usr/local/bin/mpi-desktop
 
 WORKDIR /cluster
-COPY des_busqueda.h bruteforce_des_mpi.c bruteforce_des_secuencial.c texto.txt ./
+COPY des_busqueda.h bruteforce_des_mpi.c bruteforce_des_mpi_dinamico.c bruteforce_des_secuencial.c texto.txt ./
 RUN printf '#define SEARCH "%s"\n' "$SEARCH" > /cluster/crib.h \
     && mpicc -std=gnu11 -O2 -Wall -Wextra -include /cluster/crib.h \
-        bruteforce_des_mpi.c -o /cluster/bruteforce -lcrypto \
+        bruteforce_des_mpi_dinamico.c -o /cluster/bruteforce -lcrypto \
+    && mpicc -std=gnu11 -O2 -Wall -Wextra -include /cluster/crib.h \
+        bruteforce_des_mpi.c -o /cluster/bruteforce_estatico -lcrypto \
     && mpicc -std=gnu11 -O2 -include /cluster/crib.h \
         bruteforce_des_secuencial.c -o /cluster/bruteforce_secuencial -lcrypto
 

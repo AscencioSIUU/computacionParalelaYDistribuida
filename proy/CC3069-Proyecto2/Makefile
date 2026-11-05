@@ -7,7 +7,7 @@ NP      ?= 4
 CFLAGS ?= -std=c11 -O2 -Wall -Wextra
 SSL     = -I$(OPENSSL)/include -L$(OPENSSL)/lib -lcrypto
 
-PROGRAMS := bruteforce_des_secuencial bruteforce_des_mpi
+PROGRAMS := bruteforce_des_secuencial bruteforce_des_mpi bruteforce_des_mpi_dinamico
 
 all: $(PROGRAMS)
 
@@ -15,6 +15,9 @@ bruteforce_des_secuencial: bruteforce_des_secuencial.c des_busqueda.h
 	$(CC) $(CFLAGS) $< -o $@ $(SSL)
 
 bruteforce_des_mpi: bruteforce_des_mpi.c des_busqueda.h
+	$(MPICC) $(CFLAGS) $< -o $@ $(SSL)
+
+bruteforce_des_mpi_dinamico: bruteforce_des_mpi_dinamico.c des_busqueda.h
 	$(MPICC) $(CFLAGS) $< -o $@ $(SSL)
 
 run-secuencial: bruteforce_des_secuencial

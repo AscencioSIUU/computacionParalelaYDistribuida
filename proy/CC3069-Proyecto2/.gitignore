@@ -1,6 +1,7 @@
 # binarios compilados
 bruteforce_des_secuencial
 bruteforce_des_mpi
+bruteforce_des_mpi_dinamico
 *.o
 .DS_Store
 

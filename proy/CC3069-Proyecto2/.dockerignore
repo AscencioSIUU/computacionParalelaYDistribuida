@@ -2,6 +2,7 @@
 !Dockerfile
 !des_busqueda.h
 !bruteforce_des_mpi.c
+!bruteforce_des_mpi_dinamico.c
 !bruteforce_des_secuencial.c
 !texto.txt
 !docker/

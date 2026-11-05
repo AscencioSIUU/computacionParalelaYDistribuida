@@ -16,4 +16,4 @@ mpirun --hostfile "$hostfile" \
     --mca btl_tcp_port_min_v4 20000 \
     --mca btl_tcp_port_range_v4 100 \
     --mca oob_tcp_dynamic_ipv4_ports 21000-21099 \
-    -np "$3" /cluster/bruteforce "${4:-22}" "${5:-4000000}"
+    -np "$3" "${BRUTEFORCE:-/cluster/bruteforce}" "${4:-22}" "${5:-4000000}"
