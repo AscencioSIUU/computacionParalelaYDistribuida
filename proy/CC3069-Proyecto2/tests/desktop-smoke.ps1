@@ -15,13 +15,14 @@ try {
     $env:MPI_SSH_PORT = '32222'
     Invoke-Compose up -d --build --wait --wait-timeout 90
     foreach ($peer in @('master', 'worker')) {
-        $keys = @(Invoke-Compose exec -T $peer mpi-desktop identity)
-        if ($keys.Count -ne 2) { throw 'Se esperaban dos claves publicas.' }
+        $code = Invoke-Compose exec -T $peer mpi-desktop identity-code
         $target = if ($peer -eq 'master') { 'worker' } else { 'master' }
-        $address = if ($peer -eq 'master') { '10.77.0.1' } else { '10.77.0.2' }
-        Invoke-Compose exec -T $target mpi-trust "mpi-$peer" "$($keys[0])" "$($keys[1])"
-        Invoke-Compose exec -T $target mpi-trust $address "$($keys[0])" "$($keys[1])"
+        Invoke-Compose exec -T $target mpi-desktop inspect-code "$code"
+        Invoke-Compose exec -T $target mpi-desktop trust-code "$code"
     }
+    & docker compose -p cc3069-desktop-smoke -f docker-compose.desktop.yml `
+        --profile master exec -T master mpi-desktop trust-code not-base64
+    if ($LASTEXITCODE -eq 0) { throw 'Un codigo invalido fue aceptado.' }
     Invoke-Compose exec -T master mpi-desktop connect host.docker.internal 32222
     Invoke-Compose exec -T master mpi-desktop status
     Invoke-Compose exec -T master mpi-desktop validate

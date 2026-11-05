@@ -6,6 +6,7 @@ param(
     [string]$BindAddress = '127.0.0.1',
     [string]$PeerAddress,
     [string]$PeerFile,
+    [string]$PeerCode,
     [ValidateRange(1, 65535)]
     [int]$Port = 2222,
     [ValidateRange(1, 40)]
@@ -44,22 +45,25 @@ try {
             Invoke-Compose up -d --build --wait --wait-timeout 90 $Role
         }
         'identity' {
-            $identity = @(Invoke-Node identity)
-            if ($identity.Count -ne 2) { throw 'Se esperaban dos claves publicas.' }
-            [void][System.IO.Directory]::CreateDirectory((Join-Path $PSScriptRoot '.mpi-desktop'))
-            $path = Join-Path $PSScriptRoot ".mpi-desktop/$Role.pub"
-            [System.IO.File]::WriteAllLines($path, [string[]]$identity, [System.Text.UTF8Encoding]::new($false))
             Invoke-Node fingerprints
-            Write-Output "Claves publicas: $path"
+            $code = Invoke-Node identity-code
+            Write-Output "Codigo publico: $code"
         }
         { $_ -in 'inspect', 'trust' } {
-            if (-not $PeerFile) { throw 'PeerFile debe indicar el archivo publico del otro nodo.' }
+            if ([bool]$PeerFile -eq [bool]$PeerCode) {
+                throw 'Se requiere exactamente uno de PeerCode o PeerFile.'
+            }
             if ($Command -eq 'trust' -and -not $Verified) {
                 throw 'Las dos huellas deben verificarse con el propietario antes de usar -Verified.'
             }
-            Invoke-Compose cp $PeerFile "${Role}:/tmp/mpi-peer.pub"
-            Invoke-Node fingerprints /tmp/mpi-peer.pub
-            if ($Command -eq 'trust') { Invoke-Node trust /tmp/mpi-peer.pub }
+            if ($PeerCode) {
+                Invoke-Node "$Command-code" $PeerCode
+            }
+            else {
+                Invoke-Compose cp $PeerFile "${Role}:/tmp/mpi-peer.pub"
+                Invoke-Node fingerprints /tmp/mpi-peer.pub
+                if ($Command -eq 'trust') { Invoke-Node trust /tmp/mpi-peer.pub }
+            }
         }
         'connect' {
             if (-not $PeerAddress) { throw 'PeerAddress debe indicar la IP LAN del Mac.' }

@@ -29,6 +29,12 @@ must remain enabled. No inbound MPI port ranges are needed for this setup.
 
 ## 1. Windows coordinator
 
+All build inputs and launchers belong in the repository. Both participants run
+the same committed revision from the project directory
+`proy/CC3069-Proyecto2`. No ZIP, prebuilt image transfer, or copied key file is
+required. New changes must be committed and made available in the shared
+repository before the classmate updates their checkout.
+
 From the project directory in PowerShell 7:
 
 ```powershell
@@ -36,15 +42,16 @@ From the project directory in PowerShell 7:
 .\desktop.ps1 identity
 ```
 
-The identity command writes `.mpi-desktop/master.pub`. It contains two public
-keys, not private credentials, and prints their fingerprints.
+The identity command prints two fingerprints and a single public identity code.
+That code contains only the two public keys, encoded for convenient copying.
+It is not a password or a private key.
 The master is ready for key exchange, but the tunnel is not connected yet.
 
 ## 2. Mac worker
 
-The Mac needs the updated project files. If a `worker-setup.zip` bundle is
-provided, it must be extracted to its own directory first. Commands run from
-the extracted directory, which contains `Dockerfile` and `desktop.sh`.
+The Mac needs the same updated repository revision. Commands run from the
+project directory, which contains `Dockerfile` and `desktop.sh`. Both participants
+can compare `git rev-parse --short HEAD` before starting.
 
 The Wi-Fi address is normally available with:
 
@@ -62,32 +69,33 @@ bash ./desktop.sh worker identity
 ```
 
 The first build can take several minutes under emulation. The worker must finish
-healthy before continuing. `.mpi-desktop/worker.pub` contains its two public keys.
-The printed fingerprints identify those keys.
+healthy before continuing. Its `identity` command prints the worker's public
+identity code and both fingerprints.
 
 If the Mac reports an unavailable tunnel device or `Operation not permitted`,
 the engine cannot run this setup as configured. That error must be resolved
 before a distributed test; successful local MPI alone is not sufficient.
 
-## 3. Public-key exchange and verification
+## 3. Pairing without file transfer
 
-The master receives `worker.pub`. The worker receives `master.pub`, which is
-already included at the root of the generated worker bundle.
-Only these public files are exchanged. Private keys remain in per-node Docker
-volumes and must never be copied or sent.
+Each participant copies the public identity code from `identity` to the other
+participant. The code is one line after `Codigo publico:`. Only that line's
+value is copied, without the label. No files are transferred.
+Private keys remain in per-node Docker volumes and must never enter Git or be
+copied or sent. Node identities are generated at runtime, not shared in the repo.
 
 The received fingerprints can be inspected before trust is granted:
 
 Windows:
 
 ```powershell
-.\desktop.ps1 inspect -PeerFile .\worker.pub
+.\desktop.ps1 inspect -PeerCode 'WORKER_PUBLIC_CODE'
 ```
 
 Mac:
 
 ```bash
-bash ./desktop.sh worker inspect ./master.pub
+bash ./desktop.sh worker inspect-code 'MASTER_PUBLIC_CODE'
 ```
 
 Both fingerprints must match the owner's `identity` output through an
@@ -97,18 +105,20 @@ After that verification:
 Windows:
 
 ```powershell
-.\desktop.ps1 trust -PeerFile .\worker.pub -Verified
+.\desktop.ps1 trust -PeerCode 'WORKER_PUBLIC_CODE' -Verified
 ```
 
 Mac:
 
 ```bash
-bash ./desktop.sh worker trust ./master.pub --verified
+bash ./desktop.sh worker trust-code 'MASTER_PUBLIC_CODE' --verified
 ```
 
 The tool rejects a changed server identity instead of silently accepting it.
 Trust grants the classmate remote access as root inside the project container;
 only the intended classmate's verified keys belong here.
+The placeholders above must be replaced with the actual complete public codes.
+Copying the same repository does not establish SSH trust automatically.
 
 ## 4. Connection and test from Windows
 

@@ -22,6 +22,20 @@ case "${1:-}" in
     identity)
         cat /root/.ssh/id_ed25519.pub /root/.ssh/host_ed25519_key.pub
         ;;
+    identity-code)
+        cat /root/.ssh/id_ed25519.pub /root/.ssh/host_ed25519_key.pub | base64 -w 0
+        printf '\n'
+        ;;
+    inspect-code|trust-code)
+        [[ $# -eq 2 && "$2" =~ ^[A-Za-z0-9+/=]+$ ]] || { echo "Codigo publico invalido." >&2; exit 1; }
+        file=$(mktemp)
+        trap 'rm -f "$file"' EXIT
+        printf '%s' "$2" | base64 --decode > "$file"
+        ssh-keygen -lf "$file"
+        if [[ "$1" == trust-code ]]; then
+            /usr/local/bin/mpi-desktop.sh trust "$file"
+        fi
+        ;;
     fingerprints)
         ssh-keygen -lf "${2:-/root/.ssh/id_ed25519.pub}"
         if [[ $# -eq 1 ]]; then
@@ -104,7 +118,7 @@ case "${1:-}" in
         mpi-run "$file" "$subnet" "$(( $4 + $5 ))" "$2" "$3"
         ;;
     *)
-        echo "Uso: mpi-desktop {identity|fingerprints [archivo]|trust archivo|connect IP PUERTO|disconnect|status|validate|run BITS CLAVE SLOTS_MAESTRO SLOTS_WORKER}" >&2
+        echo "Uso: mpi-desktop {identity|identity-code|inspect-code CODIGO|trust-code CODIGO|fingerprints [archivo]|trust archivo|connect IP PUERTO|disconnect|status|validate|run BITS CLAVE SLOTS_MAESTRO SLOTS_WORKER}" >&2
         exit 1
         ;;
 esac

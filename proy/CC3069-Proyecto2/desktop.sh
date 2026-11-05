@@ -21,10 +21,17 @@ case "$command" in
         compose up -d --build --wait --wait-timeout 90 "$role"
         ;;
     identity)
-        mkdir -p .mpi-desktop
-        node identity > ".mpi-desktop/$role.pub"
         node fingerprints
-        echo "Claves publicas: .mpi-desktop/$role.pub"
+        printf 'Codigo publico: '
+        node identity-code
+        ;;
+    inspect-code|trust-code)
+        [[ $# -ge 3 ]] || { echo "Se requiere el codigo publico del otro nodo." >&2; exit 1; }
+        if [[ "$command" == trust-code && "${4:-}" != --verified ]]; then
+            echo "Las dos huellas deben verificarse con el propietario antes de usar --verified." >&2
+            exit 1
+        fi
+        node "$command" "$3"
         ;;
     inspect|trust)
         [[ $# -ge 3 ]] || { echo "Se requiere el archivo publico del otro nodo." >&2; exit 1; }
