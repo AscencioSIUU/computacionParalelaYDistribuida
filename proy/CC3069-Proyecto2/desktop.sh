@@ -31,7 +31,8 @@ case "$command" in
             echo "Las dos huellas deben verificarse con el propietario antes de usar --verified." >&2
             exit 1
         fi
-        node "$command" "$3"
+        if [[ "$command" == trust-code ]]; then node "$command" "$3" "${5:-1}"
+        else node "$command" "$3" "${4:-1}"; fi
         ;;
     inspect|trust)
         [[ $# -ge 3 ]] || { echo "Se requiere el archivo publico del otro nodo." >&2; exit 1; }
@@ -41,16 +42,28 @@ case "$command" in
         fi
         compose cp "$3" "$role:/tmp/mpi-peer.pub"
         node fingerprints /tmp/mpi-peer.pub
-        if [[ "$command" == trust ]]; then node trust /tmp/mpi-peer.pub; fi
+        if [[ "$command" == trust ]]; then node trust /tmp/mpi-peer.pub "${5:-1}"; fi
         ;;
     connect)
         [[ $# -ge 3 ]] || exit 1
-        node connect "$3" "${4:-2222}"
+        node connect "$3" "${4:-2222}" "${5:-1}" "${6:-1}"
+        ;;
+    connect-all)
+        [[ $# -eq 3 ]] || { echo "Se requiere un CSV con Id,Address,Port,Slots." >&2; exit 1; }
+        remote="/tmp/mpi-workers-$$.csv"
+        compose cp "$3" "$role:$remote"
+        trap 'compose exec -T "$role" rm -f "$remote"' EXIT
+        node connect-all "$remote"
         ;;
     run)
-        node run "${3:-22}" "${4:-4000000}" "${5:-1}" "${6:-1}"
+        if [[ $# -ge 6 ]]; then node run "${3:-22}" "${4:-4000000}" "${5:-1}" "$6"
+        else node run "${3:-22}" "${4:-4000000}" "${5:-1}"; fi
         ;;
-    disconnect|status|validate)
+    disconnect)
+        if [[ $# -ge 3 ]]; then node disconnect "$3"
+        else node disconnect; fi
+        ;;
+    status|validate)
         node "$command"
         ;;
     down)

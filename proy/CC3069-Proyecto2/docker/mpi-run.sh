@@ -9,7 +9,13 @@ fi
 hostfile=$(mktemp)
 trap 'rm -f "$hostfile"' EXIT
 tr -d '\r' < "$1" > "$hostfile"
+rsh_options=()
+if [[ -n "${MPI_DESKTOP_SSH_CONFIG:-}" ]]; then
+    rsh_options=(--mca plm_rsh_agent "ssh -F $MPI_DESKTOP_SSH_CONFIG"
+        --mca plm_rsh_no_tree_spawn 1 --mca routed direct)
+fi
 mpirun --hostfile "$hostfile" \
+    "${rsh_options[@]}" \
     --mca btl tcp,self \
     --mca btl_tcp_if_include "$2" \
     --mca oob_tcp_if_include "$2" \

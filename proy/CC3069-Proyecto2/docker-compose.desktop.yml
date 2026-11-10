@@ -19,6 +19,8 @@ services:
     hostname: mpi-master
     environment:
       MPI_DESKTOP_ROLE: master
+    sysctls:
+      net.ipv4.ip_forward: "1"
     volumes: [master-ssh:/root/.ssh]
     networks: [master-network]
 

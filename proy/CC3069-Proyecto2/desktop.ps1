@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'identity', 'inspect', 'trust', 'connect', 'disconnect', 'status', 'validate', 'run', 'down')]
+    [ValidateSet('up', 'identity', 'inspect', 'trust', 'connect', 'connect-all', 'disconnect', 'status', 'validate', 'run', 'down')]
     [string]$Command = 'status',
     [ValidateSet('master', 'worker')]
     [string]$Role = 'master',
@@ -16,7 +16,10 @@ param(
     [int]$MasterSlots = 1,
     [ValidateRange(1, 64)]
     [int]$WorkerSlots = 1,
-    [switch]$Verified
+    [switch]$Verified,
+    [ValidateRange(1, 254)]
+    [int]$WorkerId = 1,
+    [string]$WorkersFile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -57,19 +60,38 @@ try {
                 throw 'Las dos huellas deben verificarse con el propietario antes de usar -Verified.'
             }
             if ($PeerCode) {
-                Invoke-Node "$Command-code" $PeerCode
+                Invoke-Node "$Command-code" $PeerCode $WorkerId
             }
             else {
                 Invoke-Compose cp $PeerFile "${Role}:/tmp/mpi-peer.pub"
                 Invoke-Node fingerprints /tmp/mpi-peer.pub
-                if ($Command -eq 'trust') { Invoke-Node trust /tmp/mpi-peer.pub }
+                if ($Command -eq 'trust') { Invoke-Node trust /tmp/mpi-peer.pub $WorkerId }
             }
         }
         'connect' {
-            if (-not $PeerAddress) { throw 'PeerAddress debe indicar la IP LAN del Mac.' }
-            Invoke-Node connect $PeerAddress $Port
+            if (-not $PeerAddress) { throw 'PeerAddress debe indicar la IP LAN del worker.' }
+            Invoke-Node connect $PeerAddress $Port $WorkerId $WorkerSlots
         }
-        'run' { Invoke-Node run $Bits $Key $MasterSlots $WorkerSlots }
+        'connect-all' {
+            if (-not $WorkersFile) { throw 'WorkersFile debe indicar un CSV con Id,Address,Port,Slots.' }
+            $remote = "/tmp/mpi-workers-$([guid]::NewGuid().ToString('N')).csv"
+            Invoke-Compose cp $WorkersFile "${Role}:$remote"
+            try {
+                Invoke-Node connect-all $remote
+            }
+            finally {
+                Invoke-Compose exec -T $Role rm -f $remote
+            }
+        }
+        'disconnect' {
+            if ($PSBoundParameters.ContainsKey('WorkerId')) { Invoke-Node disconnect $WorkerId }
+            else { Invoke-Node disconnect }
+        }
+        'run' {
+            $arguments = @('run', $Bits, $Key, $MasterSlots)
+            if ($PSBoundParameters.ContainsKey('WorkerSlots')) { $arguments += $WorkerSlots }
+            Invoke-Node @arguments
+        }
         'down' { Invoke-Compose down }
         default { Invoke-Node $Command }
     }
